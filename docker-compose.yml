@@ -1,0 +1,75 @@
+version: '2'
+services:
+  app-test:
+    image: yiisoftware/yii2-php:8.3-fpm
+    container_name: app-test
+    volumes:
+      - ~/.composer-docker/cache:/root/.composer/cache:delegated
+      - ./app:/var/www/app-test:delegated
+    working_dir: /var/www/app-test
+    ports:
+      - '9000:9000'
+    networks:
+      network-test:
+        aliases:
+          - app-test.dev
+
+  nginx-test:
+    container_name: nginx-test
+    hostname: nginx-test
+    env_file:
+      - ./.env
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+    ports:
+      - '8083:80'
+    depends_on:
+      - app-test
+    volumes:
+      - ./docker/nginx/templates:/etc/nginx/conf.d
+      - ./app:/var/www/app-test
+    networks:
+      network-test:
+        aliases:
+          - app-test.dev
+    links:
+      - app-test
+
+  rabbitmq-test:
+    build: ./docker/rabbitmq
+    container_name: rabbitmq-test
+    hostname: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=0.90
+    ports:
+      - '5674:5672'
+      - '15674:15672'
+    networks:
+      - network-test
+
+  postgres-test:
+    image: postgres:15.2
+    container_name: postgres-test
+    hostname: postgres-test
+    env_file:
+      - ./.env
+    volumes:
+      - ./docker/postgres/data/pgdata15:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql # to apply api test dumps
+    ports:
+      - '5445:5432'
+    environment:
+      - POSTGRES_DB=${PG_DATABASE}
+      - POSTGRES_USER=${PG_ROOT_USER}
+      - POSTGRES_PASSWORD=${PG_ROOT_PASSWORD}
+    networks:
+      - network-test
+
+networks:
+  network-test:
+    driver: bridge
+    external: true
+

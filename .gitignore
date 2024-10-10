@@ -1,0 +1,9 @@
+.idea
+docker/minio/data
+./docker/postgres/data
+./docker/minio/data
+./docker/redis/data
+./docker/xhprof/output/*
+./docker/xhprof/www/*
+docker/redis/data/redis/data
+docker/postgres/data/
